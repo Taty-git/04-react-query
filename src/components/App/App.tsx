@@ -1,8 +1,8 @@
-import {useState} from "react";
 import styles from './App.module.css';
 import toast, {Toaster} from 'react-hot-toast';
 import {useQuery, keepPreviousData} from "@tanstack/react-query";
 import ReactPaginate from 'react-paginate';
+import {useState, useEffect} from "react";
 import type {Movie} from '../../types/movie';
 import {fetchMovies} from "../../services/movieService";
 import Loader from '../Loader/Loader';
@@ -25,6 +25,12 @@ export default function App() {
         enabled: search !== "",
         placeholderData: keepPreviousData,
     });
+        useEffect(() => {
+        if (isSuccess && data?.results?.length === 0) {
+            toast.error("No movies found.");
+        }
+    }, [isSuccess, data]);
+
 
     const handleSearch = (newSearch: string): void => {
         setSearch(newSearch);
@@ -41,10 +47,6 @@ export default function App() {
         toggleModal();
     };
 
-
-    if (isSuccess && data?.results?.length === 0) {
-        toast.error("No movies found.");
-    }
 
     const totalPages = data?.total_pages ?? 0;
 
