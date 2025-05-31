@@ -13,67 +13,72 @@ import SearchBar from '../SearchBar/SearchBar';
 
 
 export default function App() {
-    const [movies, setMovies] = useState<Movie[]>([]);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [isError, setIsError] = useState<boolean>(false);
+
+    const [search, setSearch] = useState<string>("");
+    const [page, setPage] = useState<number>(1);
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [movie, setMovie] = useState<Movie | null>(null);
 
-    function isActive(): void {
-        setIsOpen((prev) => !prev);
-        if (isOpen == true && movie != null) setMovie(null);
-    }
-    function onSelect(params: Movie): void {
-        setMovie(params);
-        isActive();
-    }
-    const handleSearch = async (search: string): Promise<void> => {
-        try {
-            setIsLoading(true);
-            setIsError(false);
-            setMovies([]);
+    const { data, isLoading, isError, isSuccess } = useQuery({
+        queryKey: ["movies", search, page],
+        queryFn: () => fetchMovies(search, page),
+        enabled: search !== "",
+        placeholderData: keepPreviousData,
+    });
 
-            const data = await fetchMovies(search);
-            setMovies(data);
-
-            if (!data || data.length === 0) {
-                toast.error("No movies found.");
-            }
-        } catch (error) {
-            setIsError(true);
-            console.log(error);
-        } finally {
-            setIsLoading(false);
-        }
+    const handleSearch = (newSearch: string): void => {
+        setSearch(newSearch);
+        setPage(1); 
     };
+
+    const toggleModal = (): void => {
+        setIsOpen((prev) => !prev);
+        if (isOpen && movie) setMovie(null);
+    };
+
+    const onSelect = (selectedMovie: Movie): void => {
+        setMovie(selectedMovie);
+        toggleModal();
+    };
+
+
+    if (isSuccess && data?.results?.length === 0) {
+        toast.error("No movies found.");
+    }
+
     const totalPages = data?.total_pages ?? 0;
 
-        return (
-            <div className={styles.app}>
-                <Toaster position="top-center" reverseOrder={false} />
-                <SearchBar onSubmit={handleSearch} />
-                {isLoading && <Loader />}
-                {isError && <ErrorMessage />}
-                {isSuccess && totalPages > 1 && (
+    return (
+        <div className={styles.app}>
+            <Toaster position="top-center" reverseOrder={false} />
+            <SearchBar onSubmit={handleSearch} />
 
+            {isLoading && <Loader />}
+            {isError && <ErrorMessage />}
+
+            {isSuccess && totalPages > 1 && (
                 <ReactPaginate
-                pageCount={totalPages}
-                pageRangeDisplayed={5}
-                marginPagesDisplayed={1}
-                onPageChange={({ selected }) => setPage(selected + 1)}
-                forcePage={page - 1}
-                containerClassName={styles.pagination}
-                activeClassName={styles.active}
-                nextLabel="→"
-                previousLabel="←"
+                    pageCount={totalPages}
+                    pageRangeDisplayed={5}
+                    marginPagesDisplayed={1}
+                    onPageChange={({ selected }) => setPage(selected + 1)}
+                    forcePage={page - 1 >= 0 ? page - 1 : 0}
+                    containerClassName={styles.pagination}
+                    activeClassName={styles.active}
+                    nextLabel="→"
+                    previousLabel="←"
                 />
             )}
+                 {isOpen && movie && (<MovieModal onClose={toggleModal} movie={movie} />
+                )}
 
-            {data && data?.results.length > 0 && (
-                <MovieGrid movies={data?.results} onSelect={onSelect} />
-            )}
-            
-            {isOpen && movie && <MovieModal onClose={isActive} movie={movie} />}
-            </div>
-  );
+                {isSuccess && data && data.results && data.results.length > 0 && (
+                <MovieGrid movies={data.results} onSelect={onSelect} />
+                )}
+               
+                {isSuccess && data && data.results && data.results.length === 0 && (
+                <p>No movies found.</p> 
+                )}
+        </div>
+    );
 }

@@ -12,21 +12,29 @@ interface MovieSearchResponse {
   total_results: number;
 }
 
-export const fetchMovies = async (query: string): Promise<Movie[]> => {
-  const url = `3/search/movie?query=${encodeURIComponent(query)}&include_adult=false&language=en-US`;
-
+export const fetchMovies = async (
+  query: string,
+  page: number
+): Promise<MovieSearchResponse> => {
+  const url = `3/search/movie?query=${encodeURIComponent(query)}&include_adult=false&language=en-US&page=${page}`;
+  
   const config = {
     headers: {
       Authorization: `Bearer ${TOKEN}`,
     },
   };
-    try {
-       const response = await axios.get<MovieSearchResponse>(url, config);
 
-         return response.data.results || [];
-
-    } catch (error) {
+  try {
+    const response = await axios.get<MovieSearchResponse>(url, config);
+    return response.data;
+  } catch (error) {
     console.error('Error fetching movies:', error);
-    return [];
+    
+    return {
+      page: 1,
+      results: [],
+      total_pages: 0,
+      total_results: 0,
+    };
   }
 };
